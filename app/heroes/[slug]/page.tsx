@@ -419,7 +419,7 @@ export default async function HeroDetailPage({ params }: { params: Promise<{ slu
                       {/* Skin image */}
                       <div style={{ height: "140px", background: `linear-gradient(135deg, ${rc2}18, var(--bg2))`, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
                         {skinIcon
-                          ? <img src={skinIcon} alt={skin.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "12px" }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                          ? <img src={skinIcon} alt={skin.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: "12px" }} />
                           : <span style={{ fontSize: "2.5rem", opacity: 0.3 }}>🦸</span>}
                         <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 50% 50%, ${rc2}10 0%, transparent 70%)`, pointerEvents: "none" }} />
                       </div>

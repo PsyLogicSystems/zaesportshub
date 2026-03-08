@@ -11,7 +11,7 @@ function buildWavePath(
   hovered: boolean,
   cx = 12
 ): string {
-  const N = 24;
+  const N = 32; // more segments = smoother curve
   const segH = height / N;
   let d = `M ${cx.toFixed(1)} 0`;
 
@@ -19,15 +19,18 @@ function buildWavePath(
     const midY = (i + 0.5) * segH;
     const endY = Math.min((i + 1) * segH, height);
 
-    // Base sine wave
-    const sine = Math.sin(i * 0.62 + phase) * amplitude;
+    // Two overlapping sine waves at different frequencies for organic feel
+    const wave1 = Math.sin(i * 0.55 + phase)        * amplitude;
+    const wave2 = Math.sin(i * 1.10 + phase * 1.6)  * amplitude * 0.35;
+    const sine  = wave1 + wave2;
 
-    // Cursor-proximity bulge (hovered only)
+    // Cursor bulge: strong push outward near mouse position
     let bulge = 0;
-    if (hovered && amplitude > 1.5) {
+    if (hovered) {
       const dist = Math.abs(midY - cursorY);
-      const prox = Math.max(0, 1 - dist / (height * 0.16));
-      bulge = prox * amplitude * 2.2;
+      const prox = Math.max(0, 1 - dist / (height * 0.12));
+      // Cubic falloff for sharp, punchy bulge
+      bulge = prox * prox * amplitude * 3.5;
     }
 
     const ctrlX = (cx + sine + bulge).toFixed(1);
@@ -48,7 +51,7 @@ export function HoloRod() {
 
   // Animation refs — never trigger React re-renders
   const phaseRef    = useRef(0);
-  const ampRef      = useRef(2.5);
+  const ampRef      = useRef(4);    // start with visible rest amplitude
   const ampVelRef   = useRef(0);
   const cursorYRef  = useRef(300);
   const hoveredRef  = useRef(false);
@@ -74,13 +77,14 @@ export function HoloRod() {
       const h = window.innerHeight;
 
       // Spring physics: amplitude → target
-      const targetAmp = hoveredRef.current ? 8.5 : 2.5;
-      const force = (targetAmp - ampRef.current) * 0.10;
-      ampVelRef.current = ampVelRef.current * 0.80 + force;
+      // High target + low damping = elastic, bouncy overshoot
+      const targetAmp = hoveredRef.current ? 16 : 4;
+      const force = (targetAmp - ampRef.current) * 0.13;
+      ampVelRef.current = ampVelRef.current * 0.76 + force; // lower damping = more bounce
       ampRef.current   += ampVelRef.current;
 
-      // Phase advance (faster when hovered)
-      phaseRef.current += hoveredRef.current ? 0.06 : 0.036;
+      // Phase advance (faster when hovered for more fluid motion)
+      phaseRef.current += hoveredRef.current ? 0.08 : 0.042;
 
       const path = buildWavePath(
         h,
