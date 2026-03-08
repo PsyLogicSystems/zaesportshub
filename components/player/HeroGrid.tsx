@@ -11,6 +11,7 @@ interface Hero {
   name: string;
   real_name?: string;
   role?: string;
+  imageUrl?: string;
   abilities?: { icon?: string; type?: string }[];
 }
 
@@ -208,7 +209,7 @@ export function HeroGrid() {
           overflow: hidden;
           height: 420px;
           border: 1px solid var(--border);
-          background: var(--surface);
+          background: linear-gradient(160deg, var(--bg-secondary) 0%, var(--bg) 100%);
         }
 
         /* ── Portrait ── */
@@ -395,6 +396,16 @@ export function HeroGrid() {
                     src={getPrestigeIcon(hero.name)}
                     alt={hero.name}
                     className="hero-card-portrait"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      // Try the official API image as fallback
+                      if (hero.imageUrl && img.src !== hero.imageUrl) {
+                        img.src = hero.imageUrl;
+                      } else {
+                        // Last resort: hide the broken image
+                        img.style.opacity = "0";
+                      }
+                    }}
                   />
                 </div>
 
@@ -425,7 +436,7 @@ export function HeroGrid() {
                       className="hero-card-realname"
                       style={{
                         fontSize: "0.6rem",
-                        color: "rgba(255,255,255,0.4)",
+                        color: "var(--text-muted)",
                         letterSpacing: "0.06em",
                       }}
                     >
@@ -443,7 +454,7 @@ export function HeroGrid() {
                       letterSpacing: "0.05em",
                       textTransform: "uppercase",
                       lineHeight: 1,
-                      WebkitTextStroke: "1px rgba(255,255,255,0.12)",
+                      WebkitTextStroke: "1px var(--border)",
                       margin: "2px 0 0",
                     }}
                   >
@@ -466,7 +477,7 @@ export function HeroGrid() {
                       <span style={{
                         marginLeft: "5px",
                         fontSize: "0.56rem",
-                        color: "rgba(255,255,255,0.28)",
+                        color: "var(--text-muted)",
                         letterSpacing: "0.12em",
                         textTransform: "uppercase",
                       }}>
