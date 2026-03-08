@@ -60,7 +60,12 @@ export function HeroGrid() {
   }
 
   function getPrestigeIcon(heroName: string): string {
-    return `${PRESTIGE_BASE}/${heroName.toLowerCase().replace(/\s+/g, "-")}_prestige.png`;
+    const slug = heroName
+      .toLowerCase()
+      .replace(/&/g, "and")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return `${PRESTIGE_BASE}/${slug}_prestige.png`;
   }
 
   function getHeroSlug(hero: Hero): string {
@@ -398,11 +403,19 @@ export function HeroGrid() {
                     className="hero-card-portrait"
                     onError={(e) => {
                       const img = e.currentTarget;
-                      // Try the official API image as fallback
-                      if (hero.imageUrl && img.src !== hero.imageUrl) {
-                        img.src = hero.imageUrl;
+                      // Only try the fallback once — prevents infinite retry loop
+                      if (img.dataset.fallbackTried) {
+                        img.style.opacity = "0";
+                        return;
+                      }
+                      img.dataset.fallbackTried = "1";
+                      const raw = hero.imageUrl;
+                      if (raw) {
+                        // Relative paths from the API need the external base URL
+                        img.src = raw.startsWith("/rivals/")
+                          ? `https://marvelrivalsapi.com${raw}`
+                          : raw;
                       } else {
-                        // Last resort: hide the broken image
                         img.style.opacity = "0";
                       }
                     }}
