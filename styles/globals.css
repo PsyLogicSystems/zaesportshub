@@ -37,10 +37,10 @@
    LIGHT THEME
 ═══════════════════════════════════════════ */
 [data-theme="light"] {
-  --bg:              #f0f2f8;
-  --bg-secondary:    #e8ebf4;
+  --bg:              #e8ecf2;
+  --bg-secondary:    #dfe4ee;
   --bg-card:         #ffffff;
-  --surface:         rgba(255,255,255,0.85);
+  --surface:         rgba(255,255,255,0.75);
   --border:          rgba(255,255,255,0.6);
   --border-subtle:   rgba(255,255,255,0.4);
 

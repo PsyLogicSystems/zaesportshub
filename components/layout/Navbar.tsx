@@ -6,13 +6,14 @@ import { useTheme } from "@/components/layout/ThemeProvider";
 import { Menu, X, Sun, Moon } from "lucide-react";
 
 const navLinks = [
-  { href: "/heroes", label: "Heroes" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/teams", label: "Teams" },
-  { href: "/coaches", label: "Coaches" },
-  { href: "/articles", label: "News" },
-  { href: "/community", label: "Community" },
-  { href: "/tools/comp-calculator", label: "Comp Tool" },
+  { href: "/heroes",      label: "Heroes"     },
+  { href: "/skins",       label: "Skins"      },
+  { href: "/maps",        label: "Maps"       },
+  { href: "/leaderboard", label: "Leaderboard"},
+  { href: "/news",        label: "News"       },
+  { href: "/community",   label: "Community"  },
+  { href: "/teams",       label: "Teams"      },
+  { href: "/coaches",     label: "Coaches"    },
 ];
 
 export function Navbar() {

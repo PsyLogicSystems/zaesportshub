@@ -309,15 +309,18 @@ export function HeroGrid() {
           border-radius: 24px;
           overflow: hidden;
           height: 420px;
-          border: 1px solid var(--border);
-          background: linear-gradient(160deg, var(--bg-secondary) 0%, var(--bg) 100%);
+          background: #0a0a12;
+          border: 1px solid rgba(255,255,255,0.05);
+          box-shadow:
+            inset -4px -4px 8px rgba(255,255,255,0.02),
+            6px 6px 20px rgba(0,0,0,0.7);
         }
-        /* PART 4: frosted glass in light mode */
         [data-theme="light"] .hero-card-inner {
-          background: rgba(255,255,255,0.7);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255,255,255,0.6);
+          background: #ffffff;
+          border: 1px solid rgba(0,0,0,0.08);
+          box-shadow:
+            -6px -6px 12px rgba(255,255,255,0.9),
+            6px 6px 16px rgba(180,190,210,0.6);
         }
 
         /* ── Portrait ── */
@@ -339,14 +342,14 @@ export function HeroGrid() {
           display: flex;
           flex-direction: column;
           gap: 4px;
-          z-index: 2;
+          z-index: 4;
           transition: transform 0.45s cubic-bezier(0.23,1,0.32,1);
         }
         [data-theme="dark"] .hero-card-info {
-          background: linear-gradient(to top, rgba(8,8,16,0.97) 0%, rgba(8,8,16,0.82) 55%, transparent 100%);
+          background: linear-gradient(to top, #0a0a12 0%, rgba(10,10,18,0.95) 40%, rgba(10,10,18,0.6) 68%, transparent 100%);
         }
         [data-theme="light"] .hero-card-info {
-          background: linear-gradient(to top, rgba(240,242,248,0.97) 0%, rgba(240,242,248,0.82) 55%, transparent 100%);
+          background: linear-gradient(to top, #ffffff 0%, rgba(255,255,255,0.95) 40%, rgba(255,255,255,0.6) 68%, transparent 100%);
         }
 
         /* ── Role badge ── */
@@ -484,8 +487,13 @@ export function HeroGrid() {
             >
               <div className="hero-card-inner">
 
-                {/* Portrait */}
-                <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+                {/* Portrait — z:2 so it sits above the z:1 spotlight glow */}
+                <div style={{ position: "absolute", inset: 0, zIndex: 2 }}>
+                  {/* Vignette around portrait edges */}
+                  <div aria-hidden="true" style={{
+                    position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none",
+                    background: "radial-gradient(ellipse 88% 88% at 50% 50%, transparent 38%, rgba(0,0,0,0.48) 100%)",
+                  }} />
                   <img
                     src={getPrestigeIcon(hero.name)}
                     alt={hero.name}

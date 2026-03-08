@@ -1,116 +1,244 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-/**
- * HoloRod — a decorative holographic vertical bar fixed to the left edge of
- * every page. Expands and glows when hovered, with a light that chases the
- * cursor. Flashes the full holo gradient on click.
- */
+// ── Wave path generator ──────────────────────────────────────────────────────
+function buildWavePath(
+  height: number,
+  phase: number,
+  amplitude: number,
+  cursorY: number,
+  hovered: boolean,
+  cx = 12
+): string {
+  const N = 24;
+  const segH = height / N;
+  let d = `M ${cx.toFixed(1)} 0`;
+
+  for (let i = 0; i < N; i++) {
+    const midY = (i + 0.5) * segH;
+    const endY = Math.min((i + 1) * segH, height);
+
+    // Base sine wave
+    const sine = Math.sin(i * 0.62 + phase) * amplitude;
+
+    // Cursor-proximity bulge (hovered only)
+    let bulge = 0;
+    if (hovered && amplitude > 1.5) {
+      const dist = Math.abs(midY - cursorY);
+      const prox = Math.max(0, 1 - dist / (height * 0.16));
+      bulge = prox * amplitude * 2.2;
+    }
+
+    const ctrlX = (cx + sine + bulge).toFixed(1);
+    d += ` Q ${ctrlX} ${midY.toFixed(1)} ${cx.toFixed(1)} ${endY.toFixed(1)}`;
+  }
+  return d;
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 export function HoloRod() {
-  const [isHovered,  setIsHovered]  = useState(false);
-  const [clickFlash, setClickFlash] = useState(false);
-  const [cursorY,    setCursorY]    = useState(0);
-  const [isDark,     setIsDark]     = useState(true);
+  const [isDark,    setIsDark]    = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFlash,   setIsFlash]   = useState(false);
 
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mainPathRef = useRef<SVGPathElement | null>(null);
+  const glowPathRef = useRef<SVGPathElement | null>(null);
+  const flashTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Track theme
+  // Animation refs — never trigger React re-renders
+  const phaseRef    = useRef(0);
+  const ampRef      = useRef(2.5);
+  const ampVelRef   = useRef(0);
+  const cursorYRef  = useRef(300);
+  const hoveredRef  = useRef(false);
+
+  // ── Theme tracking ──────────────────────────────────────────────────────────
   useEffect(() => {
     const check = () =>
       setIsDark(document.documentElement.getAttribute("data-theme") !== "light");
     check();
     const obs = new MutationObserver(check);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     return () => obs.disconnect();
   }, []);
 
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    setCursorY(e.clientY);
-  }
+  // ── rAF animation loop ──────────────────────────────────────────────────────
+  useEffect(() => {
+    let raf: number;
 
+    function frame() {
+      const h = window.innerHeight;
+
+      // Spring physics: amplitude → target
+      const targetAmp = hoveredRef.current ? 8.5 : 2.5;
+      const force = (targetAmp - ampRef.current) * 0.10;
+      ampVelRef.current = ampVelRef.current * 0.80 + force;
+      ampRef.current   += ampVelRef.current;
+
+      // Phase advance (faster when hovered)
+      phaseRef.current += hoveredRef.current ? 0.06 : 0.036;
+
+      const path = buildWavePath(
+        h,
+        phaseRef.current,
+        ampRef.current,
+        cursorYRef.current,
+        hoveredRef.current
+      );
+
+      mainPathRef.current?.setAttribute("d", path);
+      glowPathRef.current?.setAttribute("d", path);
+
+      raf = requestAnimationFrame(frame);
+    }
+
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, []); // Empty — refs drive all state, no re-runs needed
+
+  // ── Event handlers ──────────────────────────────────────────────────────────
+  function handleMouseEnter(e: React.MouseEvent) {
+    hoveredRef.current = true;
+    cursorYRef.current = e.clientY;
+    setIsHovered(true);
+  }
+  function handleMouseMove(e: React.MouseEvent) {
+    cursorYRef.current = e.clientY;
+  }
+  function handleMouseLeave() {
+    hoveredRef.current = false;
+    setIsHovered(false);
+  }
   function handleClick() {
     if (flashTimer.current) clearTimeout(flashTimer.current);
-    setClickFlash(true);
-    flashTimer.current = setTimeout(() => setClickFlash(false), 600);
+    setIsFlash(true);
+    flashTimer.current = setTimeout(() => setIsFlash(false), 650);
   }
 
-  // Colours for the glow that follows the cursor
-  const darkGlow  = `radial-gradient(ellipse 100% 90px at 50% ${cursorY}px,
-      rgba(45,212,191,0.85)  0%,
-      rgba(167,139,250,0.60) 38%,
-      rgba(245,158,11,0.32)  65%,
-      transparent 85%)`;
+  // ── Gradient stops ──────────────────────────────────────────────────────────
+  type Stop = { offset: string; color: string };
 
-  const lightGlow = `radial-gradient(ellipse 100% 90px at 50% ${cursorY}px,
-      rgba(255,182,193,0.90) 0%,
-      rgba(176,224,196,0.65) 38%,
-      rgba(215,194,255,0.38) 65%,
-      transparent 85%)`;
-
-  // Full holo gradient for the click flash
-  const holoFlash = isDark
-    ? "linear-gradient(to bottom, #2dd4bf, #a78bfa, #f59e0b, #fb7185, #00cfff, #2dd4bf)"
-    : "linear-gradient(to bottom, #ffb3d1, #b3eeff, #fffaaa, #b3f5d4, #d4b3ff, #ffb3d1)";
-
-  // Resting appearance — carved-in neumorphic groove
-  const restBackground = isDark
-    ? "linear-gradient(to bottom, rgba(255,255,255,0.02), rgba(255,255,255,0.06), rgba(255,255,255,0.02))"
-    : "linear-gradient(to bottom, rgba(180,190,210,0.28), rgba(255,255,255,0.65), rgba(180,190,210,0.28))";
-
-  const rodBackground = clickFlash
-    ? holoFlash
-    : isHovered
-    ? (isDark ? darkGlow : lightGlow)
-    : restBackground;
-
-  const rodGlow = clickFlash
+  const stops: Stop[] = isFlash
     ? isDark
-      ? "0 0 20px 7px rgba(45,212,191,0.65), 0 0 42px 14px rgba(167,139,250,0.45)"
-      : "0 0 20px 7px rgba(255,182,193,0.75), 0 0 42px 14px rgba(215,194,255,0.55)"
+      ? [
+          { offset: "0%",   color: "#2dd4bf" },
+          { offset: "25%",  color: "#a78bfa" },
+          { offset: "50%",  color: "#f59e0b" },
+          { offset: "75%",  color: "#fb7185" },
+          { offset: "100%", color: "#00cfff" },
+        ]
+      : [
+          { offset: "0%",   color: "#ffb3d1" },
+          { offset: "25%",  color: "#b3eeff" },
+          { offset: "50%",  color: "#fffaaa" },
+          { offset: "75%",  color: "#d4b3ff" },
+          { offset: "100%", color: "#b3f5d4" },
+        ]
     : isHovered
     ? isDark
-      ? "0 0 10px 3px rgba(45,212,191,0.38), 0 0 22px 7px rgba(167,139,250,0.22)"
-      : "0 0 10px 3px rgba(255,182,193,0.48), 0 0 22px 7px rgba(215,194,255,0.30)"
+      ? [
+          { offset: "0%",   color: "rgba(45,212,191,0.95)" },
+          { offset: "50%",  color: "rgba(167,139,250,0.90)" },
+          { offset: "100%", color: "rgba(45,212,191,0.95)" },
+        ]
+      : [
+          { offset: "0%",   color: "rgba(255,182,193,0.95)" },
+          { offset: "50%",  color: "rgba(176,224,196,0.90)" },
+          { offset: "100%", color: "rgba(215,194,255,0.95)" },
+        ]
     : isDark
-    ? "inset 2px 0 5px rgba(0,0,0,0.55), inset -1px 0 2px rgba(255,255,255,0.04), 0 0 6px rgba(167,139,250,0.08)"
-    : "inset 2px 0 5px rgba(180,190,210,0.5), inset -1px 0 3px rgba(255,255,255,0.9), 0 0 6px rgba(124,58,237,0.06)";
+    ? [
+        { offset: "0%",   color: "rgba(167,139,250,0.28)" },
+        { offset: "50%",  color: "rgba(45,212,191,0.38)" },
+        { offset: "100%", color: "rgba(167,139,250,0.28)" },
+      ]
+    : [
+        { offset: "0%",   color: "rgba(215,194,255,0.38)" },
+        { offset: "50%",  color: "rgba(176,224,196,0.48)" },
+        { offset: "100%", color: "rgba(215,194,255,0.38)" },
+      ];
+
+  const glowColor = isDark
+    ? isFlash ? "rgba(45,212,191,0.7)"   : isHovered ? "rgba(167,139,250,0.5)"  : "rgba(167,139,250,0.15)"
+    : isFlash ? "rgba(255,182,193,0.75)" : isHovered ? "rgba(215,194,255,0.55)" : "rgba(215,194,255,0.20)";
+
+  const strokeW = isHovered || isFlash ? 5 : 3;
+  const glowW   = isHovered || isFlash ? 22 : 8;
+  const glowOp  = isFlash ? 0.85 : isHovered ? 0.6 : 0.18;
 
   return (
-    /* Hit area: 32 px wide, full height, fixed to left edge */
     <div
       aria-hidden="true"
       style={{
-        position: "fixed",
-        left:     0,
-        top:      0,
-        height:   "100vh",
-        width:    "32px",
-        zIndex:   9990,
-        display:  "flex",
-        alignItems: "stretch",
-        paddingLeft: "10px",   // rod centre sits ~12 px from left edge
-        cursor:   "pointer",
+        position:      "fixed",
+        left:          0,
+        top:           0,
+        height:        "100vh",
+        width:         "32px",
+        zIndex:        9990,
+        cursor:        "pointer",
         pointerEvents: "auto",
       }}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     >
-      {/* The visible rod */}
-      <div
+      <svg
+        aria-hidden="true"
         style={{
-          width:        (isHovered || clickFlash) ? "6px" : "3px",
-          height:       "100%",
-          borderRadius: "4px",
-          background:   rodBackground,
-          boxShadow:    rodGlow,
-          transition:   clickFlash
-            ? "box-shadow 0.1s ease"
-            : "width 0.28s ease, box-shadow 0.32s ease, background 0.38s ease",
+          position: "absolute",
+          top:      0,
+          left:     0,
+          width:    "32px",
+          height:   "100vh",
+          overflow: "visible",
         }}
-      />
+      >
+        <defs>
+          {/* Vertical gradient spanning bounding box of path */}
+          <linearGradient id="holoRodGrad" x1="0" y1="0" x2="0" y2="1">
+            {stops.map((s, i) => (
+              <stop key={i} offset={s.offset} stopColor={s.color} />
+            ))}
+          </linearGradient>
+
+          {/* Glow blur filter */}
+          <filter id="holoRodGlow" x="-300%" y="-5%" width="700%" height="110%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Glow halo — wider, blurred, same path as main */}
+        <path
+          ref={glowPathRef}
+          stroke={glowColor}
+          strokeWidth={glowW}
+          fill="none"
+          strokeLinecap="round"
+          opacity={glowOp}
+          filter="url(#holoRodGlow)"
+          style={{ transition: "opacity 0.35s ease, stroke-width 0.3s ease" }}
+        />
+
+        {/* Main visible rod */}
+        <path
+          ref={mainPathRef}
+          stroke="url(#holoRodGrad)"
+          strokeWidth={strokeW}
+          fill="none"
+          strokeLinecap="round"
+          style={{ transition: "stroke-width 0.28s ease" }}
+        />
+      </svg>
     </div>
   );
 }
