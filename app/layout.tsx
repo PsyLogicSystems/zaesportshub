@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { Iceland, Pontano_Sans } from "next/font/google";
+import { Rajdhani, Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { HoloRod } from "@/components/ui/HoloRod";
 import "@/styles/globals.css";
 
-const iceland = Iceland({
-  weight: "400",
+const rajdhani = Rajdhani({
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-heading",
   display: "swap",
 });
 
-const pontanoSans = Pontano_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
@@ -48,11 +49,12 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="dark"
-      className={`${iceland.variable} ${pontanoSans.variable}`}
+      className={`${rajdhani.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
       <body>
         <ThemeProvider>
+          <HoloRod />
           <Navbar />
           <main style={{ minHeight: "100vh" }}>{children}</main>
           <Footer />
